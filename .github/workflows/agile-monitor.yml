@@ -97,12 +97,12 @@ jobs:
 
           tariffs = product_detail["single_register_electricity_tariffs"]
 
-          if "L" not in tariffs:
-              raise RuntimeError(
-                  "Agile product does not contain electricity region L."
-              )
+          region = tariffs.get("_L") or tariffs.get("L")
+          
+          if region is None:
+                 raise RuntimeError("Agile product does not contain electricity region L."
+  
 
-          region = tariffs["L"]
 
           # Prefer direct debit, otherwise use the first available tariff.
           tariff_info = (
