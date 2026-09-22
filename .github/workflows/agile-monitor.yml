@@ -64,25 +64,37 @@ jobs:
                   return json.load(response)
 
 
-          def notify(title, message, priority="default", tags="electric_plug"):
-              url = f"https://ntfy.sh/{topic}"
+def notify(title, message, priority="default", tags="electric_plug"):
+    url = f"https://ntfy.sh/{topic}"
 
-              request = urllib.request.Request(
-                  url,
-                  data=message.encode("utf-8"),
-                  method="POST",
-                  headers={
-                      "Title": title,
-                      "Priority": priority,
-                      "Tags": tags,
-                  },
-              )
+    # HTTP headers cannot safely contain emoji.
+    # Keep titles ASCII; emoji remain in the notification body.
+    safe_title = (
+        title
+        .replace("🔴", "")
+        .replace("🟠", "")
+        .replace("🟢", "")
+        .replace("🔥", "")
+        .replace("⚡", "")
+        .strip()
+    )
 
-              with urllib.request.urlopen(
-                  request,
-                  timeout=30
-              ) as response:
-                  print(f"Notification sent: HTTP {response.status}")
+    request = urllib.request.Request(
+        url,
+        data=message.encode("utf-8"),
+        method="POST",
+        headers={
+            "Title": safe_title,
+            "Priority": priority,
+            "Tags": tags,
+        },
+    )
+
+    with urllib.request.urlopen(
+        request,
+        timeout=30
+    ) as response:
+        print(f"Notification sent: HTTP {response.status}")
 
 
           def time_text(iso_string):
