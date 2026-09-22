@@ -203,7 +203,7 @@ jobs:
           print(f"Agile product: {product_code}")
           print(f"Agile tariff: {tariff_code}")
 
-          # Get current and next 24 hours.
+          # Get current and next 48 hours.
           now = datetime.now(
               timezone.utc
           ).replace(
@@ -212,7 +212,7 @@ jobs:
           )
 
           start = now - timedelta(minutes=30)
-          end = now + timedelta(hours=24)
+          end = now + timedelta(hours=48)
 
           def iso(dt):
               return dt.strftime(
@@ -294,7 +294,205 @@ jobs:
               f"-"
               f"{time_text(current['valid_to'])}"
           )
+          
+          # ------------------------------------------------------------
+          # Daily planning reports at 06:00 and 18:00.
+          # ------------------------------------------------------------
 
+          local_now = now.astimezone(LOCAL_ZONE)
+          local_hour = local_now.hour
+
+          report_type = None
+
+          if local_hour == 6:
+              report_type = "morning"
+
+          elif local_hour == 18:
+              report_type = "evening"
+
+          def get_price_periods(periods):
+              result = []
+
+              for price in periods:
+                  value = float(price["value_inc_vat"])
+
+                  start_dt = datetime.fromisoformat(
+                      price["valid_from"].replace("Z", "+00:00")
+                  )
+
+                  end_value = price.get("valid_to")
+
+                  if end_value:
+                      end_dt = datetime.fromisoformat(
+                          end_value.replace("Z", "+00:00")
+                      )
+                  else:
+                      end_dt = start_dt + timedelta(minutes=30)
+
+                  result.append({
+                      "price": value,
+                      "start": start_dt,
+                      "end": end_dt,
+                  })
+
+              return result
+
+          def format_period(period):
+              start_text = period["start"].astimezone(
+                  LOCAL_ZONE
+              ).strftime("%H:%M")
+
+              end_text = period["end"].astimezone(
+                  LOCAL_ZONE
+              ).strftime("%H:%M")
+
+              return (
+                  f"{start_text}-{end_text} "
+                  f"{period['price']:.1f}p"
+              )
+
+          def find_best_window(periods, threshold):
+              best = []
+              current_window = []
+
+              for period in periods:
+                  if period["price"] <= threshold:
+                      current_window.append(period)
+
+                  else:
+                      if len(current_window) > len(best):
+                          best = current_window
+
+                      current_window = []
+
+              if len(current_window) > len(best):
+                  best = current_window
+
+              return best
+
+          def send_daily_report(report_type):
+              periods = get_price_periods(prices)
+
+              if report_type == "evening":
+                  # Evening report: look at tomorrow.
+                  tomorrow_date = (
+                      local_now.date()
+                      + timedelta(days=1)
+                  )
+
+                  selected = [
+                      p for p in periods
+                      if p["start"].astimezone(
+                          LOCAL_ZONE
+                      ).date() == tomorrow_date
+                  ]
+
+                  title = "AGILE PLAN - TOMORROW"
+
+              else:
+                  # Morning report: look at today.
+                  today_date = local_now.date()
+
+                  selected = [
+                      p for p in periods
+                      if p["start"].astimezone(
+                          LOCAL_ZONE
+                      ).date() == today_date
+                      and p["end"] > now
+                  ]
+
+                  title = "AGILE UPDATE - TODAY"
+
+              if not selected:
+                  print(
+                      f"No price periods available for {report_type} report."
+                  )
+                  return
+
+              very_cheap = [
+                  p for p in selected
+                  if p["price"] <= VERY_CHEAP
+              ]
+
+              cheap = [
+                  p for p in selected
+                  if p["price"] <= CHEAP
+              ]
+
+              reasonable = [
+                  p for p in selected
+                  if p["price"] <= 15.0
+              ]
+
+              cheapest = min(
+                  selected,
+                  key=lambda p: p["price"]
+              )
+
+              best_window = find_best_window(
+                  selected,
+                  CHEAP
+              )
+
+              expensive = max(
+                  selected,
+                  key=lambda p: p["price"]
+              )
+
+              lines = [
+                  f"📊 {title}",
+                  "",
+                  f"🔥 Very cheap (≤5p): {len(very_cheap)} periods",
+                  f"🟢 Cheap (≤10p): {len(cheap)} periods",
+                  f"🟡 Reasonable (≤15p): {len(reasonable)} periods",
+                  "",
+                  (
+                      "💰 Cheapest: "
+                      f"{format_period(cheapest)}"
+                  ),
+                  "",
+              ]
+
+              if best_window:
+                  window_start = best_window[0]["start"].astimezone(
+                      LOCAL_ZONE
+                  ).strftime("%H:%M")
+
+                  window_end = best_window[-1]["end"].astimezone(
+                      LOCAL_ZONE
+                  ).strftime("%H:%M")
+
+                  average_price = sum(
+                      p["price"] for p in best_window
+                  ) / len(best_window)
+
+                  lines.append(
+                      "🟢 Best cheap window: "
+                      f"{window_start}-{window_end}"
+                  )
+
+                  lines.append(
+                      f"Average: {average_price:.1f}p/kWh"
+                  )
+
+                  lines.append("")
+
+              lines.append(
+                  "🔴 Highest price: "
+                  f"{format_period(expensive)}"
+              )
+
+              notify(
+                  title,
+                  "\n".join(lines),
+                  priority="default",
+                  tags="bar_chart"
+              )
+
+              print(
+                  f"{report_type.capitalize()} report sent."
+              )
+              
           # Load previous alert state.
           state_file = "agile-alert-state.json"
 
@@ -308,6 +506,21 @@ jobs:
           except Exception:
               state = {}
 
+          # Send the 06:00 or 18:00 planning report once only.
+          if report_type:
+              report_key = (
+                  f"{report_type}:{local_now.date()}"
+              )
+
+              if state.get("last_daily_report") != report_key:
+                  send_daily_report(report_type)
+
+                  state["last_daily_report"] = report_key
+
+                  print(
+                      f"Saved daily report state: {report_key}"
+                  )
+                  
           # VERY EXPENSIVE >40p.
           if current_price > VERY_EXPENSIVE:
 
