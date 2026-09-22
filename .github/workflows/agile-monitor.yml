@@ -67,52 +67,76 @@ jobs:
               with urllib.request.urlopen(req, timeout=20) as r:
                   print("Notification sent:", r.status)
 
-          # Discover the currently active Agile product.
-          products = get_json(
-              f"{API}/products/?brand=OCTOPUS_ENERGY"
-          )["results"]
+# Discover an active Agile product that actually supports
+# electricity region _L (your region).
+products = get_json(
+    f"{API}/products/?brand=OCTOPUS_ENERGY"
+)["results"]
 
-          agile = [
-              p for p in products
-              if "Agile Octopus" in p.get("display_name", "")
-              and p.get("is_business") is False
-              and p.get("available_to") is None
-          ]
+candidates = [
+    p for p in products
+    if p.get("display_name") == "Agile Octopus"
+    and p.get("is_business") is False
+]
 
-          if not agile:
-              raise RuntimeError("Could not find an active Agile Octopus product.")
+candidates.sort(
+    key=lambda p: (
+        p.get("available_to") is not None,
+        p.get("available_from") or ""
+    ),
+    reverse=False
+)
 
-          agile.sort(
-              key=lambda p: p.get("available_from") or "",
-              reverse=True
-          )
+product = None
+product_detail = None
 
-          product = agile[0]
-          product_code = product["code"]
+for candidate in candidates:
+    try:
+        detail = get_json(
+            f"{API}/products/{candidate['code']}/"
+        )
 
-          # Your electricity region is L.
-          product_detail = get_json(
-              f"{API}/products/{product_code}/"
-          )
+        tariffs = detail.get(
+            "single_register_electricity_tariffs",
+            {}
+        )
 
-          tariffs = product_detail["single_register_electricity_tariffs"]
+        if "_L" in tariffs or "L" in tariffs:
+            product = candidate
+            product_detail = detail
+            break
 
-          region = tariffs.get("_L") or tariffs.get("L")
-          
-          if region is None:
-                 raise RuntimeError("Agile product does not contain electricity region L."
-  
+    except Exception as e:
+        print(
+            f"Could not inspect {candidate.get('code')}: {e}"
+        )
 
+if product is None:
+    raise RuntimeError(
+        "Could not find an Agile Octopus product "
+        "with electricity region _L."
+    )
 
-          # Prefer direct debit, otherwise use the first available tariff.
-          tariff_info = (
-              region.get("direct_debit_monthly")
-              or next(iter(region.values()))
-          )
+product_code = product["code"]
 
-          tariff_code = tariff_info["code"]
+tariffs = product_detail[
+    "single_register_electricity_tariffs"
+]
 
-          # Get prices around now and into tomorrow.
+region = tariffs.get("_L") or tariffs.get("L")
+
+if region is None:
+    raise RuntimeError(
+        "Agile product does not contain electricity region _L."
+    )
+
+# Prefer direct debit.
+tariff_info = region.get("direct_debit_monthly")
+
+if tariff_info is None:
+    tariff_info = next(iter(region.values()))
+
+tariff_code = tariff_info["code"]
           now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
           start = now - timedelta(minutes=30)
           end = now + timedelta(hours=24)
