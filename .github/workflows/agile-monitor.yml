@@ -521,81 +521,53 @@ jobs:
                       f"Saved daily report state: {report_key}"
                   )
                   
-          # VERY EXPENSIVE >40p.
-          if current_price > VERY_EXPENSIVE:
+          # ------------------------------------------------------------
+          # Price category alerts.
+          # Only notify when the price moves into a different category.
+          # ------------------------------------------------------------
 
-              if (
-                  state.get("very_expensive_slot")
-                  != current_slot
-              ):
-                  notify(
-                      "VERY EXPENSIVE - LIMIT USE",
-                      (
-                          f"🔴 Agile electricity is "
-                          f"{current_price:.1f}p/kWh now.\n\n"
-                          "Price is above 40p/kWh. "
-                          "Limit unnecessary electricity use."
-                      ),
-                      priority="high",
-                      tags="warning,rotating_light"
-                  )
+          def price_category(price):
+              if price < 0:
+                  return "negative"
 
-                  state[
-                      "very_expensive_slot"
-                  ] = current_slot
+              if price <= 10:
+                  return "very_cheap"
 
-          # EXPENSIVE >30p.
-          elif current_price > EXPENSIVE:
+              if price <= 20:
+                  return "cheap"
 
-              if (
-                  state.get("expensive_slot")
-                  != current_slot
-              ):
-                  notify(
-                      "EXPENSIVE AGILE PRICE",
-                      (
-                          f"🟠 Current price: "
-                          f"{current_price:.1f}p/kWh.\n\n"
-                          "Consider delaying flexible "
-                          "electricity use if practical."
-                      ),
-                      priority="default",
-                      tags="warning"
-                  )
+              if price <= 29:
+                  return "normal"
 
-                  state[
-                      "expensive_slot"
-                  ] = current_slot
+              if price <= 40:
+                  return "expensive"
 
-          # NEGATIVE PRICE.
-          if current_price < 0:
+              return "very_expensive"
 
-              if (
-                  state.get("negative_slot")
-                  != current_slot
-              ):
+
+          current_category = price_category(current_price)
+          previous_category = state.get("last_price_category")
+
+
+          # Only send a notification when the category changes.
+          if current_category != previous_category:
+
+              if current_category == "negative":
+
                   notify(
                       "NEGATIVE AGILE PRICE",
                       (
                           f"⚡ Current price: "
                           f"{current_price:.1f}p/kWh.\n\n"
-                          "This is a negative-price period."
+                          "Electricity is below 0p/kWh."
                       ),
                       priority="high",
                       tags="zap,moneybag"
                   )
 
-                  state[
-                      "negative_slot"
-                  ] = current_slot
 
-          # VERY CHEAP <=5p.
-          elif current_price <= VERY_CHEAP:
+              elif current_category == "very_cheap":
 
-              if (
-                  state.get("very_cheap_slot")
-                  != current_slot
-              ):
                   notify(
                       "VERY CHEAP AGILE PRICE",
                       (
@@ -608,17 +580,9 @@ jobs:
                       tags="fire,electric_plug"
                   )
 
-                  state[
-                      "very_cheap_slot"
-                  ] = current_slot
 
-          # CHEAP <=10p.
-          elif current_price <= CHEAP:
+              elif current_category == "cheap":
 
-              if (
-                  state.get("cheap_slot")
-                  != current_slot
-              ):
                   notify(
                       "CHEAP AGILE PRICE",
                       (
@@ -631,9 +595,65 @@ jobs:
                       tags="green_circle,electric_plug"
                   )
 
-                  state[
-                      "cheap_slot"
-                  ] = current_slot
+
+              elif current_category == "normal":
+
+                  notify(
+                      "NORMAL AGILE PRICE",
+                      (
+                          f"Current price: "
+                          f"{current_price:.1f}p/kWh.\n\n"
+                          "Electricity is in the normal "
+                          "price range."
+                      ),
+                      priority="default",
+                      tags="electric_plug"
+                  )
+
+
+              elif current_category == "expensive":
+
+                  notify(
+                      "EXPENSIVE AGILE PRICE",
+                      (
+                          f"🟠 Current price: "
+                          f"{current_price:.1f}p/kWh.\n\n"
+                          "Consider delaying flexible "
+                          "electricity use if practical."
+                      ),
+                      priority="default",
+                      tags="warning"
+                  )
+
+
+              elif current_category == "very_expensive":
+
+                  notify(
+                      "VERY EXPENSIVE - LIMIT USE",
+                      (
+                          f"🔴 Current price: "
+                          f"{current_price:.1f}p/kWh.\n\n"
+                          "Price is above 40p/kWh. "
+                          "Limit unnecessary electricity use."
+                      ),
+                      priority="high",
+                      tags="warning,rotating_light"
+                  )
+
+
+              state["last_price_category"] = current_category
+
+              print(
+                  f"Price category changed: "
+                  f"{previous_category} -> {current_category}"
+              )
+
+          else:
+
+              print(
+                  f"Price category unchanged: "
+                  f"{current_category}"
+              )
 
           # Save current state.
           state["last_price"] = current_price
