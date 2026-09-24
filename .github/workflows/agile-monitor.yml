@@ -676,16 +676,18 @@ jobs:
           )
           PY
 
-      - name: Save alert state
-        run: |
-          if git diff --quiet -- agile-alert-state.json; then
-            echo "No state change."
-            exit 0
-          fi
+     - name: Save alert state
+  run: |
+    # Check both modified AND newly-created state files.
+    if git status --porcelain -- agile-alert-state.json | grep -q .; then
 
-          git config user.name "Agile Price Alert"
-          git config user.email "agile-price-alert@users.noreply.github.com"
+      git config user.name "Agile Price Alert"
+      git config user.email "agile-price-alert@users.noreply.github.com"
 
-          git add agile-alert-state.json
-          git commit -m "Update Agile alert state"
-          git push
+      git add agile-alert-state.json
+      git commit -m "Update Agile alert state"
+      git push
+
+    else
+      echo "No state change."
+    fi
