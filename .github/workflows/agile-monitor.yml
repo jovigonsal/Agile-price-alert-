@@ -17,8 +17,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Get repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       - name: Check Agile prices
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
