@@ -19,8 +19,6 @@ jobs:
     steps:
       - name: Get repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
       - name: Check Agile prices
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
