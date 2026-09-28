@@ -37,7 +37,7 @@ jobs:
           EXPENSIVE = 30.0
           VERY_EXPENSIVE = 40.0
 
-          REGION = "_L"
+          REGION = "_H"
           LOCAL_ZONE = ZoneInfo("Europe/London")
 
           topic = os.environ.get("NTFY_TOPIC", "").strip()
@@ -140,7 +140,7 @@ jobs:
           product = None
           product_detail = None
 
-          # Find an active Agile product containing region _L.
+          # Find an active Agile product containing region _H.
           for candidate in candidates:
               try:
                   detail = get_json(
@@ -152,7 +152,7 @@ jobs:
                       {}
                   )
 
-                  if "_L" in tariffs or "L" in tariffs:
+                  if "_H" in tariffs or "L" in tariffs:
                       product = candidate
                       product_detail = detail
                       break
@@ -166,7 +166,7 @@ jobs:
           if product is None:
               raise RuntimeError(
                   "Could not find an active Agile product "
-                  "containing electricity region _L."
+                  "containing electricity region _H."
               )
 
           product_code = product["code"]
@@ -176,13 +176,13 @@ jobs:
           ]
 
           region = (
-              tariffs.get("_L")
+              tariffs.get("_H")
               or tariffs.get("L")
           )
 
           if region is None:
               raise RuntimeError(
-                  "Agile product does not contain electricity region _L."
+                  "Agile product does not contain electricity region _H."
               )
 
           # Select Direct Debit tariff.
@@ -634,7 +634,7 @@ jobs:
                           "Limit unnecessary electricity use."
                       ),
                       priority="high",
-                      tags="warning,rotating_light"
+                      tags="warning,rotating_Hight"
                   )
 
 
