@@ -542,8 +542,9 @@ jobs:
               return "very_expensive"
 
 
-          current_category = price_category(current_price)
-          category_start = datetime.fromisoformat(
+           current_category = price_category(current_price)
+
+           category_start = datetime.fromisoformat(
                current["valid_from"].replace("Z", "+00:00")
            )
 
