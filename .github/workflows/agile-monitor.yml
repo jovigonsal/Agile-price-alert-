@@ -542,44 +542,45 @@ jobs:
               return "very_expensive"
 
 
-           current_category = price_category(current_price)
+          current_category = price_category(current_price)
 
-           category_start = datetime.fromisoformat(
-               current["valid_from"].replace("Z", "+00:00")
-           )
+          category_start = datetime.fromisoformat(
+              current["valid_from"].replace("Z", "+00:00")
+          )
 
-           category_end = datetime.fromisoformat(
-               current["valid_to"].replace("Z", "+00:00")
-           )
+          category_end = datetime.fromisoformat(
+              current["valid_to"].replace("Z", "+00:00")
+          )
 
-           for future_price in prices:
-               future_start = datetime.fromisoformat(
-                   future_price["valid_from"].replace("Z", "+00:00")
-               )
+          for future_price in prices:
+              future_start = datetime.fromisoformat(
+                  future_price["valid_from"].replace("Z", "+00:00")
+              )
 
-               if future_start <= category_start:
-                   continue
+              if future_start <= category_start:
+                  continue
 
-               future_category = price_category(
-                   float(future_price["value_inc_vat"])
-               )
+              future_category = price_category(
+                  float(future_price["value_inc_vat"])
+              )
 
-               if future_category != current_category:
-                   break
+              if future_category != current_category:
+                  break
 
-               category_end = datetime.fromisoformat(
-                   future_price["valid_to"].replace("Z", "+00:00")
-               )
+              category_end = datetime.fromisoformat(
+                  future_price["valid_to"].replace("Z", "+00:00")
+              )
 
-           category_hours = (
-               category_end - category_start
-           ).total_seconds() / 3600
+          category_hours = (
+              category_end - category_start
+          ).total_seconds() / 3600
 
-           category_period = (
-               f"{time_text(current['valid_from'])}-"
-               f"{time_text(category_end.isoformat())} "
-               f"({category_hours:g} hrs)"
-           )
+          category_period = (
+              f"{time_text(current['valid_from'])}-"
+              f"{time_text(category_end.isoformat())} "
+              f"({category_hours:g} hrs)"
+          )
+
           previous_category = state.get("last_price_category")
 
 
