@@ -406,20 +406,50 @@ jobs:
                   )
                   return
 
-              very_cheap = [
-                  p for p in selected
-                  if p["price"] <= VERY_CHEAP
-              ]
+def format_category_windows(periods):
+    if not periods:
+        return "0 hrs"
 
-              cheap = [
-                  p for p in selected
-                  if p["price"] <= CHEAP
-              ]
+    windows = []
+    window_start = periods[0]["start"]
+    window_end = periods[0]["end"]
 
-              reasonable = [
-                  p for p in selected
-                  if p["price"] <= 15.0
-              ]
+    for period in periods[1:]:
+        if period["start"] == window_end:
+            window_end = period["end"]
+        else:
+            hours = (window_end - window_start).total_seconds() / 3600
+            start_text = window_start.astimezone(LOCAL_ZONE).strftime("%H:%M")
+            end_text = window_end.astimezone(LOCAL_ZONE).strftime("%H:%M")
+            windows.append(f"{start_text}-{end_text} ({hours:g} hrs)")
+
+            window_start = period["start"]
+            window_end = period["end"]
+
+    hours = (window_end - window_start).total_seconds() / 3600
+    start_text = window_start.astimezone(LOCAL_ZONE).strftime("%H:%M")
+    end_text = window_end.astimezone(LOCAL_ZONE).strftime("%H:%M")
+    windows.append(f"{start_text}-{end_text} ({hours:g} hrs)")
+
+    return ", ".join(windows)
+
+
+very_cheap = [
+    p for p in selected
+    if p["price"] <= VERY_CHEAP
+]
+
+cheap = [
+    p for p in selected
+    if p["price"] > VERY_CHEAP
+    and p["price"] <= CHEAP
+]
+
+reasonable = [
+    p for p in selected
+    if p["price"] > CHEAP
+    and p["price"] <= 15.0
+]
 
               cheapest = min(
                   selected,
@@ -439,9 +469,9 @@ jobs:
               lines = [
                   f"📊 {title}",
                   "",
-                  f"🔥 Very cheap (≤5p): {len(very_cheap)} periods",
-                  f"🟢 Cheap (≤10p): {len(cheap)} periods",
-                  f"🟡 Reasonable (≤15p): {len(reasonable)} periods",
+                  f"🔥 Very cheap (≤5p): {format_category_windows(very_cheap)}",
+                  f"🟢 Cheap (≤10p): {format_category_windows(cheap)}",
+                  f"🟡 Reasonable (≤15p): {format_category_windows(reasonable)}",
                   "",
                   (
                       "💰 Cheapest: "
