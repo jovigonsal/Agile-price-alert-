@@ -406,51 +406,50 @@ jobs:
                   )
                   return
 
-        def format_category_windows(periods):
-            if not periods:
-                return "0 hrs"
+              def format_category_windows(periods):
+                  if not periods:
+                      return "0 hrs"
 
-            windows = []
-            window_start = periods[0]["start"]
-            window_end = periods[0]["end"]
+                  windows = []
+                  window_start = periods[0]["start"]
+                  window_end = periods[0]["end"]
 
-            for period in periods[1:]:
-                if period["start"] == window_end:
-                    window_end = period["end"]
-                else:
-                    hours = (window_end - window_start).total_seconds() / 3600
-                    start_text = window_start.astimezone(LOCAL_ZONE).strftime("%H:%M")
-                    end_text = window_end.astimezone(LOCAL_ZONE).strftime("%H:%M")
-                    windows.append(f"{start_text}-{end_text} ({hours:g} hrs)")
+                  for period in periods[1:]:
+                      if period["start"] == window_end:
+                          window_end = period["end"]
+                      else:
+                          hours = (window_end - window_start).total_seconds() / 3600
+                          start_text = window_start.astimezone(LOCAL_ZONE).strftime("%H:%M")
+                          end_text = window_end.astimezone(LOCAL_ZONE).strftime("%H:%M")
+                          windows.append(f"{start_text}-{end_text} ({hours:g} hrs)")
 
-                    window_start = period["start"]
-                    window_end = period["end"]
+                          window_start = period["start"]
+                          window_end = period["end"]
 
-            hours = (window_end - window_start).total_seconds() / 3600
-            start_text = window_start.astimezone(LOCAL_ZONE).strftime("%H:%M")
-            end_text = window_end.astimezone(LOCAL_ZONE).strftime("%H:%M")
-            windows.append(f"{start_text}-{end_text} ({hours:g} hrs)")
+                  hours = (window_end - window_start).total_seconds() / 3600
+                  start_text = window_start.astimezone(LOCAL_ZONE).strftime("%H:%M")
+                  end_text = window_end.astimezone(LOCAL_ZONE).strftime("%H:%M")
+                  windows.append(f"{start_text}-{end_text} ({hours:g} hrs)")
 
-            return ", ".join(windows)
+                  return ", ".join(windows)
 
 
- very_cheap = [
-    p for p in selected
-    if p["price"] <= VERY_CHEAP
-]
+              very_cheap = [
+                  p for p in selected
+                  if p["price"] <= VERY_CHEAP
+              ]
 
-cheap = [
-    p for p in selected
-    if p["price"] > VERY_CHEAP
-    and p["price"] <= CHEAP
-]
+              cheap = [
+                  p for p in selected
+                  if p["price"] > VERY_CHEAP
+                  and p["price"] <= CHEAP
+              ]
 
-reasonable = [
-    p for p in selected
-    if p["price"] > CHEAP
-    and p["price"] <= 15.0
-]
-
+              reasonable = [
+                  p for p in selected
+                  if p["price"] > CHEAP
+                  and p["price"] <= 15.0
+              ]
               cheapest = min(
                   selected,
                   key=lambda p: p["price"]
