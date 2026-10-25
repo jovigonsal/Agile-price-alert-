@@ -1,8 +1,8 @@
 {
-  "last_price_category": "very_cheap",
-  "last_price": 7.63,
-  "last_checked": "2026-10-25T15:39:00+00:00",
+  "last_price_category": "normal",
+  "last_price": 25.43,
+  "last_checked": "2026-10-25T18:32:00+00:00",
   "product": "AGILE-24-10-01",
   "tariff": "E-1R-AGILE-24-10-01-H",
-  "last_daily_report": "morning:2026-10-25"
+  "last_daily_report": "evening:2026-10-25"
 }
